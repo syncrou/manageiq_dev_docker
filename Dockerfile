@@ -27,9 +27,6 @@ RUN yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
                    openssl-devel           \
                    patch                   \
                    postgresql-devel        \
-                   rh-postgresql94-postgresql-devel  \
-                   rh-postgresql94-postgresql-pglogical-output \
-                   rh-postgresql94-postgresql-pglogical \
                    readline-devel          \
                    sqlite-devel            \
                    sysvinit-tools          \
@@ -68,22 +65,8 @@ RUN git clone --depth 1 https://github.com/ManageIQ/manageiq.git ${APP_ROOT} # &
 RUN mkdir -p ${APP_ROOT}
 ADD . ${APP_ROOT}
 
-# Add persistent data volume for the app_root
-#VOLUME [ "manageiq" ]
-
 ## Add bundler and gems database.yml and postgres env
-COPY docker-environment.sh /
-COPY docker-entrypoint.sh /
-
-## Setup environment
-
-#RUN ${APPLIANCE_ROOT}/setup && \
-RUN echo "export PATH=\$PATH:/opt/rubies/ruby-2.2.4/bin" >> /etc/default/evm && \
-echo "export PATH=\$PATH:/opt/rubies/ruby-2.2.4/bin" >> ~/.bashrc && \
-#mkdir ${APP_ROOT}/log/apache && \
-mv /etc/httpd/conf.d/ssl.conf{,.orig} && \
-echo "# This file intentionally left blank. ManageIQ maintains its own SSL configuration" > /etc/httpd/conf.d/ssl.conf && \
-echo "export APP_ROOT=${APP_ROOT}" >> /etc/default/evm && \
+RUN echo "export PATH=\$PATH:/opt/rubies/ruby-2.2.4/bin:/opt/rubies/ruby-2.2.4/bin" >> ~/.bashrc && \
 echo "export APP_ROOT=${APP_ROOT}" >> ~/.bashrc
 
 COPY database.yml ${APP_ROOT}/config/
@@ -93,25 +76,17 @@ RUN curl -sL http://rubygems.org/rubygems/rubygems-2.6.4.tgz | tar xz && \
 
 ## Change workdir to application root, build/install gems
 WORKDIR ${APP_ROOT}
-RUN source /etc/default/evm && \
-/usr/bin/memcached -u memcached -p 11211 -m 64 -c 1024 -l 127.0.0.1 -d && \
+RUN /usr/bin/memcached -u memcached -p 11211 -m 64 -c 1024 -l 127.0.0.1 -d && \
 npm install npm -g && \
 npm install gulp bower -g && \
-gem install bundler -v ">=1.8.4" && \
-bin/setup --no-db --no-tests && \
+/opt/rubies/ruby-2.2.4/bin/gem install bundler -v ">=1.8.4" && \
+#bin/update && \
 rm -rvf /opt/rubies/ruby-2.2.4/lib/ruby/gems/2.2.0/cache/*
 #bower cache clean && \
 #npm cache clean
 
 ## Enable services on systemd
-#RUN systemctl enable memcached appliance-initialize evmserverd evminit evm-watchdog miqvmstat miqtop
 RUN systemctl enable memcached #miqtop
 
 ## Expose required container ports
 EXPOSE 3000
-
-# Configure an entry point, so we don't need to specify 
-# "bundle exec" for each of our commands.
-#ENTRYPOINT ["bundle", "exec"]
-#CMD ["bundle", "exec", "rails", "server", "-p", "3000", "-b", "'0.0.0.0'"]
-CMD ["/docker-entrypoint.sh"]

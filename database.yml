@@ -15,11 +15,11 @@ base: &base
   adapter: postgresql
   encoding: utf8
   username: root
+  password: buttons
   pool: 5
   wait_timeout: 5
   min_messages: warning
-  host: <%= ENV['POSTGRES_PORT_5432_TCP_ADDR'] %> 
-  port: <%= ENV['POSTGRES_PORT_5432_TCP_PORT'] %>
+  host: 10.0.1.61 
 
 development:
  <<: *base
